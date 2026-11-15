@@ -12,10 +12,15 @@
 
 import serial
 import glob
+import sys
 import time
 import csv
 import os
 from datetime import datetime
+
+# the motor code lives in the motor folder
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "motor"))
+from motor_run import MotorRunner
 
 BAUD = 921600
 RUN_SECONDS = 30
@@ -68,6 +73,10 @@ os.makedirs(data_folder, exist_ok=True)
 name = datetime.now().strftime("session_%Y%m%d_%H%M%S.csv")
 path = os.path.abspath(os.path.join(data_folder, name))
 
+# ---------- connect the motor (it moves the receiver during the recording) ----------
+motor = MotorRunner()
+motor.connect()
+
 # ---------- start both boards ----------
 print("Starting in 3 seconds. Keep the middle clear.")
 time.sleep(3)
@@ -89,6 +98,7 @@ while True:
     if "START" in line:
         started = True
         start = time.time()
+        motor.start()
         print("Recording... keep the middle clear for 15 seconds")
         continue
 
@@ -126,6 +136,9 @@ while True:
     if now > RUN_SECONDS + 10:
         print("Timed out waiting for END")
         break
+
+# ---------- stop the motor ----------
+motor.stop()
 
 # ---------- save the csv ----------
 if len(rows) == 0:

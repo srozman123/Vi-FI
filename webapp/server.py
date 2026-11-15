@@ -20,7 +20,12 @@ import csv
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import sys
 import serial
+
+# the motor code lives in the motor folder
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "motor"))
+from motor_run import MotorRunner
 
 PORT = 8000
 BAUD = 921600
@@ -91,6 +96,7 @@ def run_test():
     sender = None
     receiver = None
     others = []
+    motor = MotorRunner()
 
     try:
         status("Looking for the boards (takes a few seconds)...")
@@ -100,6 +106,9 @@ def run_test():
             status("Could not find both boards. Are both plugged in and flashed?")
             add_event({"type": "error"})
             return
+
+        # the motor moves the receiver during the recording
+        motor.connect(log=status)
 
         status("Starting in 3 seconds. Keep the middle clear.")
         time.sleep(3)
@@ -124,6 +133,7 @@ def run_test():
             if "START" in line:
                 started = True
                 start = time.time()
+                motor.start()
                 add_event({"type": "started", "run_seconds": RUN_SECONDS, "change_at": CHANGE_AT})
                 status("Recording... keep the middle clear")
                 continue
@@ -216,6 +226,7 @@ def run_test():
         add_event({"type": "error"})
 
     finally:
+        motor.stop()
         for ser in [sender, receiver] + others:
             if ser is not None:
                 try:
